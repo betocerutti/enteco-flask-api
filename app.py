@@ -1,19 +1,20 @@
 from flask import Flask, jsonify, Blueprint
+from flask_restx import Api
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 import logging
-from flasgger import Swagger
-from flasgger.utils import swag_from
 
 from exceptions import EmpresaNoEncontradaError, ClienteNoEncontradoError
 from queries import cliente_exist, get_requerido_vacios
 
+
 app = Flask(__name__)
+api = Api(app, version='1.0', title='Enteco API')
+
 
 # Definimos la ruta de la API
 common_bp = Blueprint('common', __name__, url_prefix='/enteco/api-ora')
-
 
 # Configuramos la conexión a la base de datos
 username = 'alfredo'
@@ -24,11 +25,6 @@ service_name = 'ENTECO'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'oracle://{username}:{password}@{hostname}:{port}/{service_name}'.format(
     username=username, password=password, hostname=hostname, port=port, service_name=service_name
 )
-app.config['SWAGGER'] = {
-    'title': 'API ORA',
-    'uiversion': 3
-}
-swagger = Swagger(app)
 engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 
 # Configuramos el log de SQLAlchemy
@@ -49,18 +45,12 @@ db = SQLAlchemy(app)
 API_URL = '/enteco/api-ora'
     
 
-@app.errorhandler(404)
-def not_found(error):
-    return jsonify({'error': 'Not found'}), 404
-
 @common_bp.route('/observaciones-cliente/requerido-vacios/<int:empresa_id>/<cliente_id>',
                  methods=['GET'])
-@swag_from('swagger/enteco_api_ora.yml')
 def get_observaciones(empresa_id: int, cliente_id: int):
     """
     Devuelve los campos que faltan por rellenar en las observaciones
     de un cliente nuevo.
-    return: lista de campos
     """
 
     session = Session(engine)
